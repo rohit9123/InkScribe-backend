@@ -1,0 +1,199 @@
+Amazon DynamoDB is a fully managed NoSQL database service that provides fast and predictable performance with seamless scalability.
+ It is designed to handle large amounts of data and can support high traffic applications. DynamoDB is a key-value and document 
+ database that delivers single-digit millisecond performance at any scale.
+
+Here are some key concepts to understand when working with DynamoDB:
+
+Tables: A table is a collection of items, and each item is a collection of attributes. 
+Tables in DynamoDB are schemaless, which means that each item in a table can have a different set of attributes.
+
+Primary Key: A primary key is a unique identifier for each item in a table. 
+            There are two types of primary keys in DynamoDB: Partition key and Partition key and sort key.
+
+Partition Key: A partition key is also known as a hash key. It is a simple primary key that consists of a single attribute.
+             DynamoDB uses the partition key's value as input to an internal hash function. The output of the hash function 
+             determines the partition (physical storage internal to DynamoDB) in which the item will be stored.
+
+Example: Consider a table that stores information about books. The partition key could be the ISBN number of the book.
+
+Partition Key and Sort Key: A partition key and sort key together form a composite primary key.
+                            The partition key is used to determine the partition in which the item will be stored,
+                             and the sort key is used to sort the items within the partition.
+Example: Consider a table that stores information about orders. The partition key could be the customer ID, and the sort key could be the order date.
+
+Global Secondary Index (GSI): A global secondary index is a separate index with a partition key and sort key that can be different from the primary key
+                             of the table. A GSI allows you to query the table using an alternate key.
+Example: Consider a table that stores information about books. The primary key is the ISBN number of the book. You could create a GSI with the author name as the partition key and the book title as the sort key. This would allow you to query the table for all books by a particular author.
+
+Local Secondary Index (LSI): A local secondary index is similar to a GSI, but it has the same partition key as the table's primary key.
+                             A LSI allows you to query the table using a different sort key.
+Example: Consider a table that stores information about orders. The primary key is the customer ID and order date. You could create a LSI with the customer ID as the partition key and the order status as the sort key. This would allow you to query the table for all orders by a particular customer, sorted by order status.
+
+
+//example how to create table through nestjs
+
+import { Injectable } from '@nestjs/common';
+import * as AWS from 'aws-sdk';
+
+@Injectable()
+export class DynamoDBService {
+  private readonly dynamoDB: AWS.DynamoDB;
+
+  constructor() {
+    this.dynamoDB = new AWS.DynamoDB({
+      region: 'us-east-1', // Replace with your desired region
+      apiVersion: '2012-08-10',
+    });
+  }
+
+  async createTable(): Promise<void> {
+    const params: AWS.DynamoDB.CreateTableInput = {
+      TableName: 'my-table', // Replace with your desired table name
+      KeySchema: [
+        {
+          AttributeName: 'id',
+          KeyType: 'HASH',
+        },
+      ],
+      AttributeDefinitions: [
+        {
+          AttributeName: 'id',
+          AttributeType: 'S',
+        },
+      ],
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 5,
+        WriteCapacityUnits: 5,
+      },
+    };
+
+    try {
+      await this.dynamoDB.createTable(params).promise();
+      console.log('Table created successfully');
+    } catch (error) {
+      console.error('Error creating table:', error);
+    }
+  }
+}
+
+
+The TableName property specifies the name of the table to be created. In this case, it is set to 'my-table', but you can replace it with your desired table name.
+
+The KeySchema property specifies the primary key of the table. In this case, it is set to an object with an AttributeName of 'id' and a KeyType of 'HASH'.
+ This means that the 'id' attribute will be used as the partition key for the table.
+
+The AttributeDefinitions property specifies the attributes of the table. In this case, it is set to an object with an AttributeName of 'id' and
+ an AttributeType of 'S'. This means that the 'id' attribute is of type string.
+
+The ProvisionedThroughput property specifies the read and write capacity units for the table. 
+In this case, it is set to 5 read capacity units and 5 write capacity units.
+
+
+
+
+                                                                DynamoDB stream
+
+DynamoDB Streams is a feature of Amazon DynamoDB that captures a time-ordered sequence of item-level modifications in a DynamoDB table
+ and stores this information in a log for up to 24 hours. You can use DynamoDB Streams to trigger AWS Lambda functions to perform custom 
+ actions in response to item-level modifications in a DynamoDB table.
+
+To set up a Lambda function to process DynamoDB Streams, you can follow these steps:
+
+Create a new Lambda function in the AWS Management Console or using the AWS CLI. Make sure to choose a runtime
+ that supports the programming language you are using (e.g. Node.js for JavaScript or TypeScript).
+
+In the Lambda function configuration, add a new trigger for DynamoDB Streams. Choose the DynamoDB table you want 
+to monitor and select the appropriate settings for the trigger (e.g. batch size, starting position).
+
+Write the code for your Lambda function to process the DynamoDB stream events. The event object passed to the Lambda
+ function will contain information about the type of event (e.g. INSERT, MODIFY, REMOVE) and the item that was modified. 
+ You can use this information to perform custom actions in response to the event.
+
+
+ we also have attach iam role according to this
+
+Here's an example of a Lambda function written in TypeScript that logs information about DynamoDB stream events:
+
+import { DynamoDBStreamEvent } from 'aws-lambda';
+
+export const handler = async (event: DynamoDBStreamEvent): Promise<void> => {
+  console.log('Received event:', JSON.stringify(event, null, 2));
+
+  for (const record of event.Records) {
+    if (record.eventName === 'INSERT') {
+      console.log('New item added:', JSON.stringify(record.dynamodb.NewImage, null, 2));
+    } else if (record.eventName === 'MODIFY') {
+      console.log('Item modified:', JSON.stringify(record.dynamodb.NewImage, null, 2));
+    } else if (record.eventName === 'REMOVE') {
+      console.log('Item removed:', JSON.stringify(record.dynamodb.OldImage, null, 2));
+    }
+  }
+};
+
+
+In this example, we define a Lambda function that logs information about DynamoDB stream events. 
+We use the aws-lambda library to define the type of the event object passed to the function.
+ We then loop through the Records array in the event object and log information about each event based on its eventName property.
+
+To deploy this Lambda function, you can use the AWS CLI or a deployment tool like Serverless Framework. 
+Once the function is deployed and the DynamoDB stream trigger is set up,
+ the Lambda function will be automatically triggered in response to item-level modifications in the DynamoDB table
+
+
+                                                                pagination
+
+
+Pagination in DynamoDB is the process of retrieving a large number of items from a DynamoDB table in smaller, more manageable chunks.
+ DynamoDB provides two main pagination methods: using the LastEvaluatedKey value and using the ExclusiveStartKey value.
+
+The LastEvaluatedKey value is returned by a query or scan operation when there are more items to retrieve.
+ You can use the LastEvaluatedKey value as the starting point for the next query or scan operation to retrieve the next set of items.
+  This method is useful when you want to retrieve all items in a table that match a certain criteria.
+
+The ExclusiveStartKey value is used to specify the starting point for a query operation.
+ You can use the ExclusiveStartKey value to retrieve a specific range of items from a table.
+  This method is useful when you want to retrieve a specific range of items in a table.
+
+To use pagination in DynamoDB, you can include the ExclusiveStartKey or LastEvaluatedKey value in the query or scan operation parameters.
+ You can also use the Limit parameter to specify the maximum number of items to retrieve in a single operation.
+
+this also have page size of 1mb
+
+Here's an example of how to use pagination with the LastEvaluatedKey value in the aws-sdk library for Node.js:
+
+const AWS = require('aws-sdk');
+
+const dynamoDB = new AWS.DynamoDB({ region: 'us-east-1' });
+
+const params = {
+  TableName: 'my-table',
+  KeyConditionExpression: '#pk = :pk',
+  ExpressionAttributeNames: {
+    '#pk': 'partitionKey',
+  },
+  ExpressionAttributeValues: {
+    ':pk': { S: 'partitionValue' },
+  },
+  Limit: 10,
+};
+
+let lastEvaluatedKey;
+
+do {
+  if (lastEvaluatedKey) {
+    params.ExclusiveStartKey = lastEvaluatedKey;
+  }
+
+  const result = await dynamoDB.query(params).promise();
+
+  // Process the result here
+
+  lastEvaluatedKey = result.LastEvaluatedKey;
+} while (lastEvaluatedKey);
+
+
+In this example, we define a params object that includes the TableName, KeyConditionExpression, ExpressionAttributeNames, 
+ExpressionAttributeValues, and Limit parameters for a query operation. We then use a do-while loop to retrieve items from the
+ DynamoDB table in batches of 10 using the query method of the DynamoDB client. We include the ExclusiveStartKey parameter in the params object 
+ to specify the starting point for each query operation. We also set the lastEvaluatedKey variable to the LastEvaluatedKey value returned
+  by each query operation to use as the starting point for the next query operation. The loop continues until there are no more items to retrieve.

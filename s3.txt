@@ -1,0 +1,49 @@
+                                        s3 bucket
+
+Video Link -> https://www.youtube.com/watch?v=DiWWPo2Qoso
+github Link -> https://github.com/iam-veeramalla/aws-devops-zero-to-hero/tree/main/day-9 (please read one time atleast)
+
+s3 : simple storage service
+Problem solved by aws: it solve Problem of storage 
+popular : its 99.99999999999 relaible it means if we want 1 billion of 
+           object in 100years than there is only chance of 1 object is deleted
+
+what is s3 ?
+Amazon s3 is a scalable,highly available,sceure and cost effective cloud storage
+service provided by aws .
+
+s3 service allows you to create bucket in which you can store anything.
+it dont have any limit we can store unlimeted data in one bucket .
+but one object can be more than 5tb.
+
+we can access the data by http protocal and it is globally accessiable
+example -> https://s3.amazonaws.com/example-rk-oct-27/nestjs
+            example-rk-oct-27 is bucket name
+            nestjs is our file which we want to download 
+
+we can also restrict the downloading option 
+example -> my organstion people can only download it
+
+
+Bucket name -> it should be unique across all aws account
+Naming convention -> productName-featureName-enviroment-companyName
+                    example - app1-payments-prod-InkScribe
+
+
+
+Benefits of s3
+  Availabilty & Durability
+  Scalablity
+  Security
+  Cost effective
+  Perfomance
+
+
+Security -> s3 provides bucket polices,  access control, and encryption setting are 
+            appropriately configured
+
+cost effective -> it depands on the storage class that we use
+
+aws is also a version solution if we enable versioning
+
+ 
