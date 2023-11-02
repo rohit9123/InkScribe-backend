@@ -6,6 +6,7 @@ import { DynamoDB } from 'aws-sdk';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { UserDto } from './dto/user.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 
 
@@ -24,29 +25,34 @@ export class UserService {
 
     async createUser(user: UserDto): Promise<any> {
         const { name, email, password } = user;
+        if (!password) {
+            throw new Error('Password is required');
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
+        
         const params = {
             TableName: 'Users',
             Item: {
+                id: uuidv4(),
                 name,
                 email,
                 password: hashedPassword,
-                Followers: [],
-                Following: [],
-                Posts: [],
-                Likes: [],
+                Followers: [String],
+                Following: [String],
+                Posts: [String],
+                Likes: [String],
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString()
             }
         };
         try {
-            const user =await this.dynamoDBClient.put(params).promise();
+            await this.dynamoDBClient.put(params).promise();
             const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '1d' });
             return {
                 token,
                 name: name,
                 email: email,
-                _id: user.Attributes._id
+                id: params.Item.id
             };
         } catch (error) {
             throw new Error(error);
@@ -55,10 +61,11 @@ export class UserService {
     }
     async signIn(user: UserDto): Promise<any> { 
         const { email, password } = user;
+        console.log(email, password);
         const params = {
             TableName: 'Users',
             Key: {
-                email
+                email,
             }
         };
         try {
